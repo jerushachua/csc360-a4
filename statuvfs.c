@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
                    sb.dir_blocks);
     printf("-----------------------------------------------------------\n\n");
 
-    // go through FAT to find stats
+    // go through blocks to find stats
     int free_b = 0;
     int res_b = 0;
     int alloc_b = 0;

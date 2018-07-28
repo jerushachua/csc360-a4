@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
 
     fseek(f, sb.dir_start * sb.block_size, SEEK_SET);
 
-    // each entry is 64 bytes
+    // each directory entry is 64 bytes
     int num_entries = sb.dir_blocks * (sb.block_size / 64);
     directory_entry_t dir;
     for( i = 0; i < num_entries; i++){
