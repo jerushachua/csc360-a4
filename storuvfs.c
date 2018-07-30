@@ -135,46 +135,47 @@ int main(int argc, char *argv[]) {
             size = ftell(f);
             fseek(f, 0L, SEEK_SET);
 
-            /*
-            no need to change the superblock when adding a file
-
-            // big endian --> little endian
-            sb.block_size = ntohs(sb.block_size);
-            sb.num_blocks = ntohl(sb.num_blocks);
-            sb.fat_start = ntohl(sb.fat_start);
-            sb.fat_blocks = ntohl(sb.fat_blocks);
-            sb.dir_start = ntohl(sb.dir_start);
-            sb.dir_blocks = ntohl(sb.dir_blocks);
-
-            // write new superblock
-            fseek(s, 0, SEEK_SET);
-            fwrite(&sb, sizeof(sb), 1, s);
-
-            */
-
             // now edit the FAT
             fseek(s, dir.start_block * sb.block_size, SEEK_SET);
             for(i = 0; i < num_entries; i++){
                 fread(&dir, sizeof(directory_entry_t), 1, s);
                 dir.file_size = htonl(dir.file_size);
-                if(dir.status == DIR_ENTRY_AVAILABLE) break;
+
+                // found an empty dir block, add dir entry
+                if(dir.status == DIR_ENTRY_AVAILABLE){
+                    dir.file_size = size;
+                    dir.file_size = ntohl(dir.file_size);
+                    dir.status = DIR_ENTRY_NORMALFILE;
+                    strcpy(dir.filename, filename);
+                    pack_current_datetime(dir.create_time);
+                    pack_current_datetime(dir.modify_time);
+
+                    // write the new entry
+                    fwrite(&dir, sizeof(directory_entry_t), 1, s); 
+                }
             }
-            // once we exit the loop, dir is the at an empty entry
 
-            // update the new FAT entry
-            dir.file_size = size;
-            dir.file_size = ntohl(dir.file_size);
-            dir.status = FAT_RESERVED; 
-            strcpy(dir.filename, filename);
-            pack_current_datetime(dir.create_time);
-            pack_current_datetime(dir.modify_time);
+            // now write the file to the image
+            int current_block = dir.start_block;
+            int fat_data;
+            int values_written;
 
-            // write the new FAT entry
-            fwrite(&dir, sizeof(directory_entry_t), 1, s);
+            // search for free FAT blocks
+            fseek(f, sb.fat_start * sb.block_size, SEEK_SET);
+            for(i = 0; i < sb.num_blocks; i++){
+                fread(&fat_data, 4, 1, f);
+                fat_data = htonl(fat_data);
 
-            // write the data block for the actual sourcefile
-            fseek(s, (sb.fat_start + dir.start_block) * sb.block_size, SEEK_SET);
-            fwrite(s, size, 1, f);
+                // free block found
+                if(fat_data == 0){
+                    fat_data = 0x00000001;
+                    fat_data = htonl(fat_data);
+                    fwrite(&fat_data, 4, 1, s);
+
+                    values_written = fwrite(s, 1, sb.block_size, f);
+                    printf("values written: %d\n", values_written);
+                }
+            }
 
         } else {
             printf("File already exists in the disk image.\n");

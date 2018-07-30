@@ -9,7 +9,7 @@
 
 int main(int argc, char *argv[]) {
     superblock_entry_t sb;
-    int  i, ii;
+    int  i;
     char *imagename = NULL;
     char *filename  = NULL;
     FILE *f;
@@ -68,6 +68,7 @@ int main(int argc, char *argv[]) {
         dir.file_size = htonl(dir.file_size);
 
         int current_block = dir.start_block;
+        int left_to_read = dir.file_size;
         int fat_val;
         int values_read;
         char buffer[sb.block_size];
@@ -75,8 +76,10 @@ int main(int argc, char *argv[]) {
 
             // read block contents
             fseek(f, current_block * sb.block_size, SEEK_SET);
-            values_read = fread(buffer, 1, sb.block_size, f);
+            if(left_to_read - sb.block_size < 0) values_read = fread(buffer, 1, left_to_read, f);
+            else values_read = fread(buffer, 1, sb.block_size, f);
             printf("%.*s", values_read, buffer);
+            left_to_read = left_to_read - values_read;
 
             // next block_size
             fseek(f, sb.fat_start * sb.block_size + (4 * current_block), SEEK_SET);
