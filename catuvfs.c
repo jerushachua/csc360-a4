@@ -34,7 +34,7 @@ int main(int argc, char *argv[]) {
     f = fopen(imagename, "r");
     fseek(f, 0, SEEK_SET);
     fread(&sb, sizeof(sb), 1, f);
-    
+
     // go from little endian to big endian
     sb.block_size = htons(sb.block_size);
     sb.num_blocks = htonl(sb.num_blocks);
@@ -67,24 +67,24 @@ int main(int argc, char *argv[]) {
         dir.num_blocks = htonl(dir.num_blocks);
         dir.file_size = htonl(dir.file_size);
 
-        int start_block = dir.start_block;
+        int current_block = dir.start_block;
         int fat_val;
+        int values_read;
         char buffer[sb.block_size];
-        int i = 0;
-        while(i < 5){
+        while(1){
 
             // read block contents
-            fseek(f, start_block * sb.block_size, SEEK_SET);
-            fread(buffer, sb.block_size, 1, f);
-            printf("%s\n", buffer);
+            fseek(f, current_block * sb.block_size, SEEK_SET);
+            values_read = fread(buffer, 1, sb.block_size, f);
+            printf("%.*s", values_read, buffer);
 
             // next block_size
-            fseek(f, sb.fat_start * sb.block_size + (4 * start_block), SEEK_SET);
-            if( fread(&fat_val, 4, 1, f) != -1 ) break;
-            start_block = fat_val;
-            if(start_block == FAT_LASTBLOCK) break;
+            fseek(f, sb.fat_start * sb.block_size + (4 * current_block), SEEK_SET);
+            if( fread(&fat_val, 4, 1, f) == -1 ) break;
+            fat_val = htonl(fat_val);
+            current_block = fat_val;
+            if(current_block == FAT_LASTBLOCK) break;
 
-            i++;
         }
     }
 
