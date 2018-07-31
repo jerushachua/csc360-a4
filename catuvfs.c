@@ -78,7 +78,11 @@ int main(int argc, char *argv[]) {
             fseek(f, current_block * sb.block_size, SEEK_SET);
             if(left_to_read - sb.block_size < 0) values_read = fread(buffer, 1, left_to_read, f);
             else values_read = fread(buffer, 1, sb.block_size, f);
-            printf("%.*s", values_read, buffer);
+
+            for(i=0; i<values_read; i++){
+                printf("%c",buffer[i]); 
+            }
+            // printf("%.*s", values_read, buffer);
             left_to_read = left_to_read - values_read;
 
             // next block_size
